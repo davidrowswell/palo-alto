@@ -19,3 +19,100 @@ delete network interface ethernet ethernet1/5
 delete network interface ethernet ethernet1/6
 delete network interface ethernet ethernet1/7
 delete network interface ethernet ethernet1/8
+
+#General system health
+show system info –provides the system’s management IP, serial number and code version
+show system statistics – shows the real time throughput on the device
+show system software status – shows whether various system processes are running
+show jobs processed – used to see when commits, downloads, upgrades, etc. are completed
+show system disk-space-- show percent usage of disk partitions
+show system logdb-quota – shows the maximum log file sizes
+debug dataplane internal vif link – show management interface (eth0) counters
+
+# To monitor CPUs
+show system resources -- shows processes running in the management plane similar to “top” command
+show running resource-monitor – used to see the resource utilization in the data plane, such as dataplane CPU utilization
+less mp--log mp-monitor.log – Every 15 minutes the system runs a script to monitor management plane resource usage, output is stored in this file.
+less dp--log dp-monitor.log -- Every 15 minutes the system runs a script to monitor dataplane resource usage, output is stored in this file.
+
+#General dropped packet troubleshooting
+ping source <IP_addr_src_int> host <IP_addr_host> -- allows to ping from the specified FW source interface
+ping host <IP> -- ping from the MGT interface
+show session all | match – used to show specific sessions in the session table. You can
+enter any text after the word match. A good example would be a source or destination IP or an application
+show session all | filter destination <IP> dest--port <port>-- shows all sessions going to a particular dest IP and port
+show session id – shows the specifics behind a particular session by entering the ID number after the word "id”
+show counter interface – shows interface counters
+show counter global | match drop – used to troubleshoot dropped packets
+show counter global delta yes | match [ drop | error | frag ] – show counter changes
+since last time ran this command, filter on particular keyword
+
+#NAT
+show running nat-policy - shows current NAT policy table
+show running ippool     - use to see if NAT pool leak
+test nat-policy-match   – simulate traffic going through the device, what NAT policy will it match?
+
+#Routing
+show routing route      – displays the routing table
+test routing fib-lookup virtual-router <VR_name> ip <IP_addr_trying_reach> -- finds which route in the routing table will be used to reach the IP address that you are testing
+
+#Policies
+show running security-policy – shows the current policy set
+#test security-policy-match from trust to untrust destination <IP>-- simulate a packet going through the system, which policy will it match?
+
+#PAN Agent
+show user pan-agent statistics – used to see if the agent is connected and operational. Status should be connected OK and you should see numbers under users, groups and IPs.
+show pan-agent user-IDs -- used to see if the FW has pulled groups from the PANAgent
+show user ip-user-mapping – used to see IP to username mappings on the FW
+clear user-cache all – clears the user--ID cache
+debug device-server reset pan--agent <name> -- reset the firewall’s connection to the specified agent
+
+#URL
+test url <url or IP> – used to test the categorization of a URL on the FW
+tail follow yes mp-log pan_bc_download.log – shows the BrightCloud database update logs
+request url-filtering download status – shows the status of the database download (essentially the very last line from the pan_bc_download.log file)
+debug dataplane show url-cache statistics– shows statistics on the URL cache
+show counter global | match url – shows statistics on URL processing
+clear url-cache – used to clear the URL cache-- cache contains 100k of the most popular URLs on this network
+show log url direction equal backward-- view the URL log, most recent entries first
+
+#To test connectivity to the BrightCloud servers:
+ ping host service.brightcloud.com
+ ping host database.brightcloud.com
+
+#Log viewing / deleting1
+show log [ system | traffic | threat ] direction equal backward – will take you to the end of the specified log
+show log [ system | traffic | threat ] direction equal forward – will take you to beginning of the specified log
+clear log [ traffic | threat | acc ] – clear everything in the specified log
+
+#Software, Content, and Licenses
+To upgrade the software on the FW:
+tftp import software from <IP_addr_tftp_server> file <filename>
+request system software install file <filename>
+request restart system
+request system software [info | check | download | install ] –manipulate PANOS software from the CLI
+
+##To upgrade the content on the FW:
+tftp import content from <IP_addr_tftp_server> file <filename>
+request content upgrade install file <filename>
+request content downgrade install previous –downgrade to the previous content version
+request system private--data--reset-- to clear config and logs/reports
+debug swm [ status | list | revert ] – will show possible code to install, or code that was installed. “revert” is used to revert to last running OS version without having to do a
+factory reset (such as from 4.0 to back to 3.1)
+request license info – shows the license installed on the device
+delete license key ? – use to delete a license file if having issues and want to retrieve new licenses, use question mark to list file names, only delete the files you see fit
+
+#Config diff/force/cli format
+show config diff-- compares two versions of the config
+commit force-- perform a commit, even if there are errors
+set cli config--output--format set-- use to view the config  in “set” format from within the configure prompt (#)
+
+#IPSec
+To view detailed debug information for IPSec tunneling:
+          1. debug ike global on debug
+          2. less mp--log ikemgr.log
+
+#Misc
+set deviceconfig setting session tcp-reject--non--syn no – used to ignore SYN when creating sessions; confirm command took effect with show session info
+set deviceconfig setting session offload no –-- makes all packets go through CPU, otherwise all fastpath packets just go through EZ chip (turns off session offload to fastpath); confirm command took effect with show session info
+debug dataplane pool statistics -- this will show the different dataplane buffers and can e used to see if the system is nearing capacity in certain functionality. 
